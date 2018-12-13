@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/emnh/sentinels#readme",
   "dependencies": {
+    "jquery": "^3.3.1",
     "three": "^0.99.0",
     "webpack": "^4.27.1",
     "webpack-cli": "^3.1.2",

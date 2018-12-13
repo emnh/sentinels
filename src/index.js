@@ -4,8 +4,7 @@ const $ = require('jquery');
 
 console.log("Hello!");
 
-function main() {
-
+function setup(state) {
   // Set the scene size.
   const WIDTH = 1600;
   const HEIGHT = 1200;
@@ -43,6 +42,24 @@ function main() {
   // DOM element.
   container.appendChild(renderer.domElement);
 
+  function update () {
+    // Draw!
+    renderer.render(scene, camera);
+
+    // Schedule the next frame.
+    requestAnimationFrame(update);
+  }
+
+  // Schedule the first frame.
+  requestAnimationFrame(update);
+
+  state.container = container;
+  state.renderer = renderer;
+  state.camera = camera;
+  state.scene = scene;
+}
+
+function addContent(state) {
   // create the sphere's material
   const sphereMaterial =
     new THREE.MeshLambertMaterial(
@@ -63,7 +80,7 @@ function main() {
       RINGS),
     sphereMaterial);
   sphere.position.z = -1;
-  scene.add(sphere);
+  state.scene.add(sphere);
 
   const ground = new THREE.Mesh(
     new THREE.PlaneBufferGeometry(
@@ -74,7 +91,7 @@ function main() {
     sphereMaterial);
   ground.rotation.x = -Math.PI / 4.0;
   ground.position.z = -1;
-  scene.add(ground);
+  state.scene.add(ground);
 
   // create a point light
   const pointLight =
@@ -86,20 +103,15 @@ function main() {
   pointLight.position.z = 130;
 
   // add to the scene
-  scene.add(pointLight);
-
-  // Draw!
-  renderer.render(scene, camera);
-
-  function update () {
-    // Draw!
-    renderer.render(scene, camera);
-
-    // Schedule the next frame.
-    requestAnimationFrame(update);
-  }
-
-  // Schedule the first frame.
-  requestAnimationFrame(update);
+  state.scene.add(pointLight);
 }
-$(main);
+
+function main(state) {
+  setup(state);
+  addContent(state);
+}
+
+const state = {};
+$(function() {
+  main(state);
+});

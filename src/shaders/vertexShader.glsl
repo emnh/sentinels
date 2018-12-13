@@ -1,10 +1,14 @@
+#version 300 es
+
 precision mediump float;
 precision mediump int;
-uniform mat4 modelViewMatrix; // optional
-uniform mat4 projectionMatrix; // optional
 
-attribute vec3 position;
+in vec4 aPosition;
+
+uniform vec2 uResolution;
+uniform float uTime;
 
 void main()	{
-  gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+  //gl_Position = projectionMatrix * modelViewMatrix * vec4(aPosition, 1.0);
+  gl_Position = vec4(aPosition.xyz, 1.0);
 }

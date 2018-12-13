@@ -4,6 +4,7 @@ const $ = require('jquery');
 
 const vertexShaderSource = require('./shaders/vertexShader.glsl');
 const fragmentShaderSource  = require('./shaders/fragmentShader.glsl');
+const copyShaderSource  = require('./shaders/copyShader.glsl');
 
 const commonShader = require('./shaders/common.glsl');
 const bufAShader = require('./shaders/bufA.glsl');
@@ -14,114 +15,6 @@ console.log("Hello!");
 
 function getTime(state) {
   return ((new Date()).getTime() - state.startTime) / 1000.0;
-}
-
-function setup(state) {
-
-  state.startTime = (new Date()).getTime();
-
-  // Set the scene size.
-  const WIDTH = 1600;
-  const HEIGHT = 1200;
-  state.width = WIDTH;
-  state.height = HEIGHT;
-
-  // Set some camera attributes.
-  const VIEW_ANGLE = 45;
-  const ASPECT = WIDTH / HEIGHT;
-  const NEAR = 0.1;
-  const FAR = 10000;
-
-  // Get the DOM element to attach to
-  const container =
-      document.querySelector('body');
-
-  // Create a WebGL renderer, camera
-  // and a scene
-  const renderer = new THREE.WebGLRenderer();
-  const camera =
-      new THREE.PerspectiveCamera(
-          VIEW_ANGLE,
-          ASPECT,
-          NEAR,
-          FAR
-      );
-
-  const scene = new THREE.Scene();
-
-  // Add the camera to the scene.
-  scene.add(camera);
-
-  // Start the renderer.
-  renderer.setSize(WIDTH, HEIGHT);
-
-  // Attach the renderer-supplied
-  // DOM element.
-  container.appendChild(renderer.domElement);
-
-  state.renderFunctions = [];
-
-  function update () {
-    // Draw!
-    for (let i = 0; i < state.renderFunctions.length; i++) {
-      state.renderFunctions[i](state);
-    }
-    renderer.render(scene, camera);
-
-    // Schedule the next frame.
-    requestAnimationFrame(update);
-  }
-
-  // Schedule the first frame.
-  requestAnimationFrame(update);
-
-  state.container = container;
-  state.renderer = renderer;
-  state.camera = camera;
-  state.scene = scene;
-}
-
-function createQuad(state, fragmentShader) {
-  const material =
-    new THREE.RawShaderMaterial(
-      {
-        uniforms: {
-          uResolution: { value: [state.width, state.height] },
-          uTime: { value: 0.0 }
-        },
-        vertexShader: vertexShader,
-        fragmentShader: commonShader + fragmentShader
-      });
-
-  state.renderFunctions.push(function(state) {
-    material.uniforms.uTime.value = getTime(state);
-  });
-
-  const quadGeometry = new THREE.PlaneBufferGeometry(2, 2, 1, 1);
-  const quad = new THREE.Mesh(quadGeometry, material);
-  state.scene.add(quad);
-  quad.position.z = -1;
-
-  return quad;
-}
-
-function addContent(state) {
-
-  const bufAQuad = createQuad(state, bufAShader);
-  const bufBQuad = createQuad(state, bufBShader);
-  const imageQuad = createQuad(state, imageShader);
-
-  // create a point light
-  const pointLight =
-    new THREE.PointLight(0xFFFFFF);
-
-  // set its position
-  pointLight.position.x = 10;
-  pointLight.position.y = 50;
-  pointLight.position.z = 130;
-
-  // add to the scene
-  state.scene.add(pointLight);
 }
 
 function resize(canvas) {
@@ -155,7 +48,9 @@ function drawGL(state) {
 }
 
 function setupGL(state) {
-  $("body").append("<canvas id='canvas' style='width: 100%; height: 100%;' />");
+	$("body").css("border", "0px");
+	$("body").css("margin", "0px");
+  $("body").append("<canvas id='canvas' style='width: 100vw; height: 100vh; display: block;' />");
   state.canvas = $("#canvas");
   const gl = canvas.getContext("webgl2");
 	if (!gl) {
@@ -197,13 +92,53 @@ function createProgram(gl, vertexShader, fragmentShader) {
 	gl.deleteProgram(program);
 }
 
-function addContentGL(state) {
-  state.startTime = (new Date()).getTime();
+function createFB(gl, width, height) {
+	// create to render to
+	const targetTextureWidth = width;
+	const targetTextureHeight = height;
+	const targetTexture = gl.createTexture();
+	gl.bindTexture(gl.TEXTURE_2D, targetTexture);
+	 
+	const level = 0;
+	{
+		// define size and format of level 0
+		const internalFormat = gl.RGBA;
+		const border = 0;
+		const format = gl.RGBA;
+		const type = gl.UNSIGNED_BYTE;
+		const data = null;
+		gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+									targetTextureWidth, targetTextureHeight, border,
+									format, type, data);
+	 
+		// set the filtering so we don't need mips
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+	}
 
+	// Create and bind the framebuffer
+	const fb = gl.createFramebuffer();
+	gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+	 
+	// attach the texture as the first color attachment
+	const attachmentPoint = gl.COLOR_ATTACHMENT0;
+	gl.framebufferTexture2D(gl.FRAMEBUFFER, attachmentPoint, gl.TEXTURE_2D, targetTexture, level);
+
+	return {
+		tex: targetTexture,
+		fb: fb
+	};
+}
+
+function addContentGL(state) {
 	const gl = state.gl;
 	const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
   const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
 	const program = createProgram(gl, vertexShader, fragmentShader);
+
+  const copyFragmentShader = createShader(gl, gl.FRAGMENT_SHADER, copyShaderSource);
+	const copyProgram = createProgram(gl, vertexShader, copyFragmentShader);
 
 	const positionAttributeLocation = gl.getAttribLocation(program, "aPosition");
 	const positionBuffer = gl.createBuffer();
@@ -232,34 +167,70 @@ function addContentGL(state) {
   const offset = 0;        // start at the beginning of the buffer
   gl.vertexAttribPointer(positionAttributeLocation, size, type, normalize, stride, offset)
 
-	const uResolutionLocation = gl.getUniformLocation(program, "uResolution");
-	const uTimeLocation = gl.getUniformLocation(program, "uTime");
+	const sz = 256;
+	const fbTex = createFB(gl, sz, sz);
+
+	const drawSets = [];
+	drawSets.push({
+		fb: fbTex.fb,
+		tex: null,
+		program: program
+	});
+	drawSets.push({
+		fb: null,
+		tex: fbTex.tex,
+		program: copyProgram
+	});
+	
+	for (let i = 0; i < drawSets.length; i++) {
+		const drawSet = drawSets[i];
+		const fb = drawSet.fb;
+		const program = drawSet.program;
+		drawSets[i].uResolutionLocation = gl.getUniformLocation(program, "uResolution");
+		drawSets[i].uTimeLocation = gl.getUniformLocation(program, "uTime");
+		drawSets[i].uTex = gl.getUniformLocation(program, "uTex");
+	}
 
 	state.renderFunctions.push(function() {
-		// Clear the canvas
-		gl.clearColor(0, 0, 0, 0);
-		gl.clear(gl.COLOR_BUFFER_BIT);
+		for (let i = 0; i < drawSets.length; i++) {
+			const drawSet = drawSets[i];
+			const fb = drawSet.fb;
+			const program = drawSet.program;
 
-		// Tell it to use our program (pair of shaders)
-    gl.useProgram(program);
+			// render to our targetTexture by binding the framebuffer
+			gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
 
-		// Bind the attribute/buffer set we want.
-    gl.bindVertexArray(vao);
+			// Clear
+			gl.clearColor(0, 0, 0, 0);
+			gl.clear(gl.COLOR_BUFFER_BIT);
 
-		// Set uniforms
-		gl.uniform2f(uResolutionLocation, gl.canvas.width, gl.canvas.height);
-		gl.uniform1f(uTimeLocation, getTime(state));
+			// Tell it to use our program (pair of shaders)
+			gl.useProgram(program);
 
-		const primitiveType = gl.TRIANGLES;
-		const offset = 0;
-		const count = 6;
-		gl.drawArrays(primitiveType, offset, count);
+			// Bind the attribute/buffer set we want.
+			gl.bindVertexArray(vao);
+
+			// Set uniforms
+			gl.uniform2f(drawSet.uResolutionLocation, gl.canvas.width, gl.canvas.height);
+			gl.uniform1f(drawSet.uTimeLocation, getTime(state));
+			gl.uniform1i(drawSet.uTex, 0);
+
+			// Bind textures
+			gl.bindTexture(gl.TEXTURE_2D, drawSet.tex);
+
+			// Draw
+			const primitiveType = gl.TRIANGLES;
+			const offset = 0;
+			const count = 6;
+			gl.drawArrays(primitiveType, offset, count);
+		}
 	});
 }
 
 function main(state) {
   //setup(state);
   //addContent(state);
+  state.startTime = (new Date()).getTime();
   setupGL(state);
   addContentGL(state);
 }

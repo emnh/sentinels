@@ -2,12 +2,24 @@ const THREE = require('three');
 
 const $ = require('jquery');
 
+const vertexShader = require('./shaders/vertexShader.glsl');
+const fragmentShader  = require('./shaders/fragmentShader.glsl');
+
 console.log("Hello!");
 
+function getTime(state) {
+  return ((new Date()).getTime() - state.startTime) / 1000.0;
+}
+
 function setup(state) {
+
+  state.startTime = (new Date()).getTime();
+
   // Set the scene size.
   const WIDTH = 1600;
   const HEIGHT = 1200;
+  state.width = WIDTH;
+  state.height = HEIGHT;
 
   // Set some camera attributes.
   const VIEW_ANGLE = 45;
@@ -42,8 +54,13 @@ function setup(state) {
   // DOM element.
   container.appendChild(renderer.domElement);
 
+  state.renderFunctions = [];
+
   function update () {
     // Draw!
+    for (let i = 0; i < state.renderFunctions.length; i++) {
+      state.renderFunctions[i](state);
+    }
     renderer.render(scene, camera);
 
     // Schedule the next frame.
@@ -61,37 +78,32 @@ function setup(state) {
 
 function addContent(state) {
   // create the sphere's material
-  const sphereMaterial =
-    new THREE.MeshLambertMaterial(
+  const quadMaterial =
+    new THREE.RawShaderMaterial(
       {
-        color: 0xCC0000
+        uniforms: {
+          uResolution: { value: [state.width, state.height] },
+          uTime: { value: 0.0 }
+        },
+        vertexShader: vertexShader,
+        fragmentShader, fragmentShader
       });
 
+  state.quadMaterial = quadMaterial;
 
-  // Set up the sphere vars
-  const RADIUS = 0.2;
-  const SEGMENTS = 16;
-  const RINGS = 16;
+  state.renderFunctions.push(function(state) {
+    state.quadMaterial.uniforms.uTime.value = getTime(state);
+  });
 
-  const sphere = new THREE.Mesh(
-    new THREE.SphereGeometry(
-      RADIUS,
-      SEGMENTS,
-      RINGS),
-    sphereMaterial);
-  sphere.position.z = -1;
-  state.scene.add(sphere);
-
-  const ground = new THREE.Mesh(
+  const quad = new THREE.Mesh(
     new THREE.PlaneBufferGeometry(
-      1,
-      1,
+      2,
+      2,
       1,
       1),
-    sphereMaterial);
-  ground.rotation.x = -Math.PI / 4.0;
-  ground.position.z = -1;
-  state.scene.add(ground);
+    quadMaterial);
+  quad.position.z = -1;
+  state.scene.add(quad);
 
   // create a point light
   const pointLight =

@@ -15,5 +15,13 @@ module.exports = {
     port: 8080
   },
   plugins: [
-  ]
+  ],
+  module: {
+    rules: [
+      {
+        test: /\.glsl$/,
+        use: 'raw-loader'
+      }
+    ]
+  }
 };

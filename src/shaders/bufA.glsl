@@ -370,7 +370,8 @@ vec4 computeParticles(in vec2 fragCoord )
     int w = int(sqrt(float(k)));
     vec2 a1 = vec2(0.0);
     vec2 a2 = vec2(0.0);
-    int torusCount = int(pow(2.0, float(int(iTime / 4.0) % 10)));
+    //int torusCount = int(pow(2.0, float(int(iTime / 4.0) % 10)));
+    int torusCount = 4;
     int particlesPerTorus = pd.particlesPerPartition / torusCount;
     int wp = int(sqrt(float(particlesPerTorus)));
     int torus = pd.index / particlesPerTorus;

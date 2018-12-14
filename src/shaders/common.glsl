@@ -4,7 +4,7 @@
 #define pixelNearestBuffer iChannel1
 
 //#define maxRes min(vec2(800.0, 450.0), iResolution.xy)
-#define maxRes min(vec2(512.0, 512.0), iResolution.xy)
+#define maxRes min(vec2(1024.0, 1024.0), iResolution.xy)
 //#define maxRes min(vec2(1024.0, 512.0), iResolution.xy)
 //#define maxRes min(vec2(128.0, 128.0), iResolution.xy)
 //#define maxRes min(vec2(512.0, 256.0), iResolution.xy)
@@ -21,7 +21,7 @@ const bool justSentinels = true;
 
 // number of particles will be 2^magicNumberDoNotChange = 64k
 // I haven't figured out why it seems to work only when this number is 16
-const int magicNumberDoNotChange = 16;
+const int magicNumberDoNotChange = 32;
 const int MAX_ITER = 12;
 const int maxBin = 32;
 const int vec4Count = 1;

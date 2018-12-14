@@ -51,13 +51,17 @@ void lookup(out vec4 fragColor, in vec2 fragCoord) {
 
     float h = float(minIndex % pd.particlesPerPartition) / float(pd.particlesPerPartition);
     color = hsv2rgb(vec3(h, 1.0, 1.0));
-    color = mix(vec3(1.0), color, 100.0 * mind);
+    //color = mix(vec3(1.0), color, 200.0 * mind);
+    //color = mix(color, vec3(1.0), 1.0 * mind);
 
     float size = minIndex >= 0 ? float(minIndex % 10 + 1) : 1.0;
 
-    float brightness = 1.0;
+    float brightness = 1.0;	
     //fragColor += clamp(brightness * vec4(color, 1.0) * vec4(1.0 / (mind * 1000.0)), 0.0, 1.0);
-    fragColor += clamp(brightness * vec4(color, 1.0) * vec4(1.0 / (mind * realRes.x)), 0.0, 1.0);
+		if (mind <= 5.0 * length(1.0 / realRes)) {
+			fragColor.rgb = clamp(color * vec3(brightness / (mind * realRes.x)), 0.0, 1.0);
+			//fragColor.rgb = color;
+		}
     //fragColor += clamp(brightness * vec4(color, 1.0) * vec4(1.0 / (rd * realRes.x)), 0.0, 1.0);
     //fragColor = vec4(1.0 * rd);
 }

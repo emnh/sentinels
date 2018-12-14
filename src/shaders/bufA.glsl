@@ -9,7 +9,7 @@
 // https://stackoverflow.com/questions/26093629/glsl-odd-even-merge-sort
 // https://bl.ocks.org/zz85/cafa1b8b3098b5a40e918487422d47f6
 
-#define resetPressed (texelFetch(iChannel1, ivec2(KEY_LEFT,1),0 ).x > 0.5)
+// #define resetPressed (texelFetch(iChannel1, ivec2(KEY_LEFT,1),0 ).x > 0.5)
 
 const int KEY_LEFT  = 37;
 const int KEY_UP    = 38;
@@ -329,7 +329,7 @@ vec4 computeParticles(in vec2 fragCoord )
     vec2 res = maxRes;
     mPartitionData pd = getPartitionData(particleBuffer, fragCoord, res);
 
-    if (iFrame == 0 || resetPressed) {
+    if (iFrame == 0) {
         fragColor = vec4(0.0);
 
         vec2 particle = vec2(0.0);
@@ -437,7 +437,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     int maxLinear = toLinear(res - 1.0, res);
     if (frag
 	*/
-    if (iFrame == 0 || resetPressed) {
+    if (iFrame == 0) {
         fragColor.xyz = vec3(0.0);
         fragColor.w = computeZOrder(fragCoord);
     } else {

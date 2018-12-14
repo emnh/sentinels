@@ -6,10 +6,12 @@ const vertexShaderSource = require('./shaders/vertexShader.glsl');
 const fragmentShaderSource  = require('./shaders/fragmentShader.glsl');
 const copyShaderSource  = require('./shaders/copyShader.glsl');
 
-const commonShader = require('./shaders/common.glsl');
-const bufAShader = require('./shaders/bufA.glsl');
-const bufBShader = require('./shaders/bufA.glsl');
-const imageShader = require('./shaders/image.glsl');
+const preamble = require('./shaders/preamble.glsl');
+const shaderMain = require('./shaders/main.glsl');
+const commonShader = preamble + require('./shaders/common.glsl');
+const bufAShader = commonShader + require('./shaders/bufA.glsl') + shaderMain;
+const bufBShader = commonShader + require('./shaders/bufB.glsl') + shaderMain;
+const imageShader = commonShader + require('./shaders/image.glsl') + shaderMain;
 
 console.log("Hello!");
 
@@ -133,14 +135,22 @@ function createFB(gl, width, height) {
 
 function addContentGL(state) {
 	const gl = state.gl;
+
 	const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
-  const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-	const program = createProgram(gl, vertexShader, fragmentShader);
 
-  const copyFragmentShader = createShader(gl, gl.FRAGMENT_SHADER, copyShaderSource);
-	const copyProgram = createProgram(gl, vertexShader, copyFragmentShader);
+	const prog = function(text, fragmentShaderSource) {
+		console.log("Compiling: ", text);
+		const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+		const program = createProgram(gl, vertexShader, fragmentShader);
+		return program;
+	}
+  
+	const programA = prog("bufA", bufAShader);
+	const programB = prog("bufB", bufBShader);
+	const programImage = prog("image", imageShader);
+	//const copyProgram = prog("copy", copyShaderSource);
 
-	const positionAttributeLocation = gl.getAttribLocation(program, "aPosition");
+	const positionAttributeLocation = gl.getAttribLocation(programA, "aPosition");
 	const positionBuffer = gl.createBuffer();
 
 	const quadPositions = [
@@ -167,34 +177,70 @@ function addContentGL(state) {
   const offset = 0;        // start at the beginning of the buffer
   gl.vertexAttribPointer(positionAttributeLocation, size, type, normalize, stride, offset)
 
-	const sz = 256;
-	const fbTex = createFB(gl, sz, sz);
+	const w = gl.canvas.width;
+	const h = gl.canvas.height;
+	const fbTexA1 = createFB(gl, w, h);
+	const fbTexA2 = createFB(gl, w, h);
+	const fbTexB1 = createFB(gl, w, h);
+	const fbTexB2 = createFB(gl, w, h);
+
+	const alternate = function(a, b) {
+		return function(iFrame) {
+			if (iFrame % 2 == 0) {
+				return a;
+			} else {
+				return b;
+			}
+		};
+	};
+
+	const nullf = function(iFrame) { return null; };
 
 	const drawSets = [];
 	drawSets.push({
-		fb: fbTex.fb,
-		tex: null,
-		program: program
+		fb: alternate(fbTexA1.fb, fbTexA2.fb),
+		iChannel0tex: alternate(fbTexA2.tex, fbTexA1.tex),
+		iChannel1tex: nullf,
+		iChannel2tex: nullf,
+		iChannel3tex: nullf,
+		program: programA
 	});
 	drawSets.push({
-		fb: null,
-		tex: fbTex.tex,
-		program: copyProgram
+		fb: alternate(fbTexB1.fb, fbTexB2.fb),
+		iChannel0tex: alternate(fbTexA1.tex, fbTexA2.tex),
+		iChannel1tex: alternate(fbTexB2.tex, fbTexB1.tex),
+		iChannel2tex: nullf,
+		iChannel3tex: nullf,
+		program: programB
+	});
+	drawSets.push({
+		fb: nullf,
+		iChannel0tex: alternate(fbTexA1.tex, fbTexA2.tex),
+		iChannel1tex: alternate(fbTexB1.tex, fbTexB2.tex),
+		iChannel2tex: nullf,
+		iChannel3tex: nullf,
+		program: programImage
 	});
 	
 	for (let i = 0; i < drawSets.length; i++) {
 		const drawSet = drawSets[i];
 		const fb = drawSet.fb;
 		const program = drawSet.program;
-		drawSets[i].uResolutionLocation = gl.getUniformLocation(program, "uResolution");
-		drawSets[i].uTimeLocation = gl.getUniformLocation(program, "uTime");
-		drawSets[i].uTex = gl.getUniformLocation(program, "uTex");
+		drawSets[i].iResolutionLocation = gl.getUniformLocation(program, "iResolution");
+		drawSets[i].iTimeLocation = gl.getUniformLocation(program, "iTime");
+		drawSets[i].iFrameLocation = gl.getUniformLocation(program, "iFrame");
+		drawSets[i].iChannel0 = gl.getUniformLocation(program, "iChannel0");
+		drawSets[i].iChannel1 = gl.getUniformLocation(program, "iChannel1");
+		drawSets[i].iChannel2 = gl.getUniformLocation(program, "iChannel2");
+		drawSets[i].iChannel3 = gl.getUniformLocation(program, "iChannel3");
 	}
+
+	gl.disable(gl.BLEND);
 
 	state.renderFunctions.push(function() {
 		for (let i = 0; i < drawSets.length; i++) {
 			const drawSet = drawSets[i];
-			const fb = drawSet.fb;
+			const fb = drawSet.fb(state.iFrame);
 			const program = drawSet.program;
 
 			// render to our targetTexture by binding the framebuffer
@@ -211,12 +257,23 @@ function addContentGL(state) {
 			gl.bindVertexArray(vao);
 
 			// Set uniforms
-			gl.uniform2f(drawSet.uResolutionLocation, gl.canvas.width, gl.canvas.height);
-			gl.uniform1f(drawSet.uTimeLocation, getTime(state));
-			gl.uniform1i(drawSet.uTex, 0);
+			gl.uniform3f(drawSet.iResolutionLocation, gl.canvas.width, gl.canvas.height, 0.0);
+			gl.uniform1f(drawSet.iTimeLocation, getTime(state));
+			gl.uniform1i(drawSet.iFrameLocation, state.iFrame);
 
 			// Bind textures
-			gl.bindTexture(gl.TEXTURE_2D, drawSet.tex);
+			gl.uniform1i(drawSet.iChannel0, 0);
+			gl.uniform1i(drawSet.iChannel1, 1);
+			gl.uniform1i(drawSet.iChannel2, 2);
+			gl.uniform1i(drawSet.iChannel3, 3);
+			gl.activeTexture(gl.TEXTURE0);
+			gl.bindTexture(gl.TEXTURE_2D, drawSet.iChannel0tex(state.iFrame));
+			gl.activeTexture(gl.TEXTURE1);
+			gl.bindTexture(gl.TEXTURE_2D, drawSet.iChannel1tex(state.iFrame));
+			gl.activeTexture(gl.TEXTURE2);
+			gl.bindTexture(gl.TEXTURE_2D, drawSet.iChannel2tex(state.iFrame));
+			gl.activeTexture(gl.TEXTURE3);
+			gl.bindTexture(gl.TEXTURE_2D, drawSet.iChannel3tex(state.iFrame));
 
 			// Draw
 			const primitiveType = gl.TRIANGLES;
@@ -224,6 +281,7 @@ function addContentGL(state) {
 			const count = 6;
 			gl.drawArrays(primitiveType, offset, count);
 		}
+		state.iFrame++;
 	});
 }
 
@@ -231,11 +289,13 @@ function main(state) {
   //setup(state);
   //addContent(state);
   state.startTime = (new Date()).getTime();
+	state.iFrame = 0;
   setupGL(state);
   addContentGL(state);
 }
 
 const state = {};
 $(function() {
+	window.state = state;
   main(state);
 });

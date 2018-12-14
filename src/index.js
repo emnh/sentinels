@@ -36,8 +36,6 @@ function resize(canvas) {
 
 function drawGL(state) {
 	const gl = state.gl;
-	resize(gl.canvas);
-	gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
 	// Draw!
 	for (let i = 0; i < state.renderFunctions.length; i++) {
@@ -191,12 +189,16 @@ function addContentGL(state) {
   const offset = 0;        // start at the beginning of the buffer
   gl.vertexAttribPointer(positionAttributeLocation, size, type, normalize, stride, offset)
 
+	//const w = 512;
+	//const h = 512;
 	const w = gl.canvas.width;
 	const h = gl.canvas.height;
+	const w2 = gl.canvas.width;
+	const h2 = gl.canvas.height;
 	const fbTexA1 = createFB(gl, w, h);
 	const fbTexA2 = createFB(gl, w, h);
-	const fbTexB1 = createFB(gl, w, h);
-	const fbTexB2 = createFB(gl, w, h);
+	const fbTexB1 = createFB(gl, w2, h2);
+	const fbTexB2 = createFB(gl, w2, h2);
 
 	const alternate = function(a, b) {
 		return function(iFrame) {
@@ -217,7 +219,9 @@ function addContentGL(state) {
 		iChannel1tex: nullf,
 		iChannel2tex: nullf,
 		iChannel3tex: nullf,
-		program: programA
+		program: programA,
+		w: w,
+		h: h
 	});
 	drawSets.push({
 		fb: alternate(fbTexB1.fb, fbTexB2.fb),
@@ -225,7 +229,9 @@ function addContentGL(state) {
 		iChannel1tex: alternate(fbTexB2.tex, fbTexB1.tex),
 		iChannel2tex: nullf,
 		iChannel3tex: nullf,
-		program: programB
+		program: programB,
+		w: w2,
+		h: h2
 	});
 	drawSets.push({
 		fb: nullf,
@@ -233,7 +239,9 @@ function addContentGL(state) {
 		iChannel1tex: alternate(fbTexB1.tex, fbTexB2.tex),
 		iChannel2tex: nullf,
 		iChannel3tex: nullf,
-		program: programImage
+		program: programImage,
+		w: gl.canvas.width,
+		h: gl.canvas.height
 	});
 	
 	for (let i = 0; i < drawSets.length; i++) {
@@ -241,6 +249,7 @@ function addContentGL(state) {
 		const fb = drawSet.fb;
 		const program = drawSet.program;
 		drawSets[i].iResolutionLocation = gl.getUniformLocation(program, "iResolution");
+		drawSets[i].iCanvasResolutionLocation = gl.getUniformLocation(program, "iCanvasResolution");
 		drawSets[i].iTimeLocation = gl.getUniformLocation(program, "iTime");
 		drawSets[i].iFrameLocation = gl.getUniformLocation(program, "iFrame");
 		drawSets[i].iChannel0 = gl.getUniformLocation(program, "iChannel0");
@@ -260,6 +269,14 @@ function addContentGL(state) {
 
 			// render to our targetTexture by binding the framebuffer
 			gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+			
+			// Resize
+			if (fb == null) {
+				resize(gl.canvas);
+				gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+			} else {
+				gl.viewport(0, 0, w, h);
+			}
 
 			// Clear
 			gl.clearColor(0, 0, 0, 0);
@@ -272,7 +289,8 @@ function addContentGL(state) {
 			gl.bindVertexArray(vao);
 
 			// Set uniforms
-			gl.uniform3f(drawSet.iResolutionLocation, gl.canvas.width, gl.canvas.height, 0.0);
+			gl.uniform3f(drawSet.iCanvasResolutionLocation, gl.canvas.width, gl.canvas.height, 0.0);
+			gl.uniform3f(drawSet.iResolutionLocation, w, h, 0.0);
 			gl.uniform1f(drawSet.iTimeLocation, getTime(state));
 			gl.uniform1i(drawSet.iFrameLocation, state.iFrame);
 
@@ -289,7 +307,7 @@ function addContentGL(state) {
 			gl.bindTexture(gl.TEXTURE_2D, drawSet.iChannel2tex(state.iFrame));
 			gl.activeTexture(gl.TEXTURE3);
 			gl.bindTexture(gl.TEXTURE_2D, drawSet.iChannel3tex(state.iFrame));
-
+	
 			// Draw
 			const primitiveType = gl.TRIANGLES;
 			const offset = 0;

@@ -79,6 +79,7 @@ void debug(out vec4 fragColor, in vec2 fragCoord) {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     //debug(fragColor, fragCoord);
+		// fragCoord = floor(fragCoord * iResolution.xy / iCanvasResolution.xy);
     lookup(fragColor, fragCoord);
     //fragColor = vec4(vec3(0.5), 1.0);
 		fragColor.a = 1.0;

@@ -11,7 +11,7 @@
 //#define maxRes min(vec2(iResolution.x, 256.0), iResolution.xy)
 //#define maxRes min(vec2(512.0, iResolution.y), iResolution.xy)
 //#define maxRes iResolution.xy
-#define realRes iResolution.xy
+#define realRes iCanvasResolution.xy
 #define powerOfTwoRes vec2(2048.0, 2048.0)
 //#define realRes maxRes
 //#define maxRes iResolution.xy
@@ -21,7 +21,7 @@ const bool justSentinels = true;
 
 // number of particles will be 2^magicNumberDoNotChange = 64k
 // I haven't figured out why it seems to work only when this number is 16
-const int magicNumberDoNotChange = 32;
+const int magicNumberDoNotChange = 16 * 2;
 const int MAX_ITER = 12;
 const int maxBin = 32;
 const int vec4Count = 1;
@@ -273,7 +273,7 @@ int getMaxPartition(mPartitionData pd) {
     int k = 0;
     for (int i = 0; i <= pd.partitionCount; i++) {
         int n = 1 << i;
-		if (2 * n > pd.particlesPerPartition || pd.particlesPerPartition % n != 0) break;
+				if (2 * n > pd.particlesPerPartition || pd.particlesPerPartition % n != 0) break;
         k = i;
     }
     return k + 1;

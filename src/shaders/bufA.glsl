@@ -222,7 +222,7 @@ vec4 mergeSort(in vec2 fragCoord) {
     bool overflow = false;
     for (int part = 0; part < vec4Count; part++) {
         mcData ret = getMCData(PART, pd);
-    	overflow = overflow || ret.overflow;
+				overflow = overflow || ret.overflow;
         fragColor[PART] = binarySearchForMergeSlim(
             PART, ret.targetOffset, ret.n, ret.n,
             res, ret.astart, ret.bstart).vi[PART];

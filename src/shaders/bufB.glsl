@@ -69,7 +69,9 @@ float doDistance(int part, in vec2 fragCoord, vec2 colorUV) {
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-  //fragCoord = floor(fragCoord / iResolution.xy * maxRes);
+  // fragCoord = floor(fragCoord / iResolution.xy * maxRes);
+
+	// fragCoord = floor(fragCoord * iResolution.xy / iCanvasResolution.xy);
 
 	vec2 res = maxRes;
   // TODO: try +0.5

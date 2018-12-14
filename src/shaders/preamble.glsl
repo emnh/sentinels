@@ -4,6 +4,7 @@ precision highp float;
 precision highp int;
 
 uniform vec3 iResolution;
+uniform vec3 iCanvasResolution;
 uniform float iTime;
 uniform int iFrame;
 uniform sampler2D iChannel0;

@@ -77,5 +77,5 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     //debug(fragColor, fragCoord);
     lookup(fragColor, fragCoord);
     //fragColor = vec4(vec3(0.5), 1.0);
-    //fragColor = texture(iChannel1, fragCoord / iResolution.xy);
+		fragColor.a = 1.0;
 }

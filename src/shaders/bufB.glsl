@@ -77,20 +77,20 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 	vec4 old = texelFetch(pixelNearestBuffer, ivec2(fragCoord), 0);
 
-    for (int part = 0; part < vec4Count; part++) {
-    	float oldIndex = old[part];
+  for (int part = 0; part < vec4Count; part++) {
+      float oldIndex = old[part];
 
-        mRet mret1 = getM(part, int(oldIndex), res);
-        float d2 = distance(colorUV, mret1.pos);
+      mRet mret1 = getM(part, int(oldIndex), res);
+      float d2 = distance(colorUV, mret1.pos);
 
-        float index = doDistance(part, fragCoord, colorUV);
+      float index = doDistance(part, fragCoord, colorUV);
 
-        mRet mret2 = getM(part, int(index), res);
+      mRet mret2 = getM(part, int(index), res);
 
-        float d3 = distance(colorUV, mret2.pos);
+      float d3 = distance(colorUV, mret2.pos);
 
-        index = d3 < d2 ? index : oldIndex;
+      index = d3 < d2 ? index : oldIndex;
 
-        fragColor[PART] = index;
-    }
+      fragColor[PART] = index;
+  }
 }

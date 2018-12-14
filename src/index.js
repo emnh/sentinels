@@ -59,8 +59,21 @@ function setupGL(state) {
 		$("body").html("<h1>No WebGL 2!</h1>");
 		return;
 	}
+
+  const lext1 = gl.getExtension('EXT_color_buffer_float');
+	if (!lext1) {
+		$("body").html("<h1>No WebGL 2 Extension: EXT_color_buffer_float!</h1>");
+		return;
+	}
+
+  const lext2 = gl.getExtension('OES_texture_float_linear');
+	if (!lext2) {
+		$("body").html("<h1>No WebGL 2 Extension: OES_texture_float_linear!</h1>");
+		return;
+	}
 	state.gl = gl;
 
+	resize(gl.canvas);
   state.renderFunctions = [];
 	requestAnimationFrame(function() {
 		drawGL(state);
@@ -104,16 +117,17 @@ function createFB(gl, width, height) {
 	const level = 0;
 	{
 		// define size and format of level 0
-		const internalFormat = gl.RGBA;
+		const internalFormat = gl.RGBA32F;
 		const border = 0;
 		const format = gl.RGBA;
-		const type = gl.UNSIGNED_BYTE;
+		const type = gl.FLOAT;
 		const data = null;
 		gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
 									targetTextureWidth, targetTextureHeight, border,
 									format, type, data);
 	 
 		// set the filtering so we don't need mips
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -235,6 +249,7 @@ function addContentGL(state) {
 		drawSets[i].iChannel3 = gl.getUniformLocation(program, "iChannel3");
 	}
 
+	// Disable blending
 	gl.disable(gl.BLEND);
 
 	state.renderFunctions.push(function() {

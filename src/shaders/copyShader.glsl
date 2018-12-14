@@ -12,4 +12,5 @@ out vec4 outColor;
 void main()	{
   vec2 uv = gl_FragCoord.xy / uResolution.xy;
   outColor = texture(iChannel0, uv);
+	outColor.a = 1.0;
 }

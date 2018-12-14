@@ -13,6 +13,13 @@ const bufAShader = commonShader + require('./shaders/bufA.glsl') + shaderMain;
 const bufBShader = commonShader + require('./shaders/bufB.glsl') + shaderMain;
 const imageShader = commonShader + require('./shaders/image.glsl') + shaderMain;
 
+const particleShader = commonShader + require('./shaders/v2/particles.glsl') + shaderMain;
+
+const drawParticlesShaderVertex =
+	commonShader + require('./shaders/v2/drawParticlesVertex.glsl');
+const drawParticlesShaderFragment =
+	commonShader + require('./shaders/v2/drawParticlesFragment.glsl') + shaderMain;
+
 console.log("Hello!");
 
 function getTime(state) {
@@ -87,6 +94,14 @@ function createShader(gl, type, source) {
 		return shader;
 	}
  
+	const lines = source.split(/\r?\n/);
+	let s = "<pre>";
+	for (let i = 0; i < lines.length; i++) {
+		s += (i + 1).toString() + ': ' + lines[i] + '\n';
+	}
+	s += '</pre>';
+	$("body").html(s);
+ 
 	console.log(gl.getShaderInfoLog(shader));
 	gl.deleteShader(shader);
 }
@@ -100,7 +115,7 @@ function createProgram(gl, vertexShader, fragmentShader) {
 	if (success) {
 		return program;
 	}
- 
+
 	console.log(gl.getProgramInfoLog(program));
 	gl.deleteProgram(program);
 }
@@ -150,21 +165,34 @@ function addContentGL(state) {
 
 	const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
 
+	const particlesVertexShader = createShader(gl, gl.VERTEX_SHADER, drawParticlesShaderVertex);
+
 	const prog = function(text, fragmentShaderSource) {
 		console.log("Compiling: ", text);
 		const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
 		const program = createProgram(gl, vertexShader, fragmentShader);
 		return program;
 	}
+
+	const progParticles = function(text, fragmentShaderSource) {
+		console.log("Compiling: ", text);
+		const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+		const program = createProgram(gl, particlesVertexShader, fragmentShader);
+		return program;
+	}
   
+	const programParticles = prog("particles", particleShader);
 	const programA = prog("bufA", bufAShader);
 	const programB = prog("bufB", bufBShader);
 	const programImage = prog("image", imageShader);
-	//const copyProgram = prog("copy", copyShaderSource);
+	const programCopy = prog("copy", copyShaderSource);
+
+	const programDrawParticles = progParticles("particlesDraw", drawParticlesShaderFragment);
 
 	const positionAttributeLocation = gl.getAttribLocation(programA, "aPosition");
 	const positionBuffer = gl.createBuffer();
 
+	const vao = gl.createVertexArray();
 	const quadPositions = [
 			// First triangle:
 			 1.0,  1.0,
@@ -175,26 +203,54 @@ function addContentGL(state) {
 			 1.0, -1.0,
 			 1.0,  1.0
 	];
-	gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(quadPositions), gl.STATIC_DRAW);
+	{
+		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(quadPositions), gl.STATIC_DRAW);
 
-	const vao = gl.createVertexArray();
-	gl.bindVertexArray(vao);
-	gl.enableVertexAttribArray(positionAttributeLocation);
+		gl.bindVertexArray(vao);
+		gl.enableVertexAttribArray(positionAttributeLocation);
 
-	const size = 2;          // 2 components per iteration
-  const type = gl.FLOAT;   // the data is 32bit floats
-  const normalize = false; // don't normalize the data
-  const stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
-  const offset = 0;        // start at the beginning of the buffer
-  gl.vertexAttribPointer(positionAttributeLocation, size, type, normalize, stride, offset)
+		const size = 2;
+		const type = gl.FLOAT;
+		const normalize = false;
+		const stride = 0;
+		const offset = 0;
+		gl.vertexAttribPointer(positionAttributeLocation, size, type, normalize, stride, offset)
+	}
 
-	//const w = 512;
-	//const h = 512;
-	const w = gl.canvas.width;
-	const h = gl.canvas.height;
+	const w = 512;
+	const h = w;
 	const w2 = gl.canvas.width;
 	const h2 = gl.canvas.height;
+
+	const fbParticles1 = createFB(gl, w, h);
+	const fbParticles2 = createFB(gl, w, h);
+	const fbParticles3 = createFB(gl, w, h);
+
+	const particlesVAO = gl.createVertexArray();
+	{
+		const vertexCount = 6 * 2;
+		const quadPositions2 = new Float32Array(w * h * vertexCount);
+		for (let i = 0; i < quadPositions2.length; i++) {
+			quadPositions2[i] = quadPositions[i % vertexCount];
+		}
+
+		const positionAttributeLocation = gl.getAttribLocation(programDrawParticles, "aPosition");
+		gl.bindVertexArray(particlesVAO);
+		gl.enableVertexAttribArray(positionAttributeLocation);
+
+		const positionBuffer = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, quadPositions2, gl.STATIC_DRAW);
+
+		const size = 2;
+		const type = gl.FLOAT;
+		const normalize = false;
+		const stride = 0;
+		const offset = 0;
+		gl.vertexAttribPointer(positionAttributeLocation, size, type, normalize, stride, offset)
+	}
+
 	const fbTexA1 = createFB(gl, w, h);
 	const fbTexA2 = createFB(gl, w, h);
 	const fbTexB1 = createFB(gl, w2, h2);
@@ -209,10 +265,47 @@ function addContentGL(state) {
 			}
 		};
 	};
+	
+	const alternate3 = function(a, b, c) {
+		return function(iFrame) {
+			if (iFrame % 3 == 0) {
+				return a;
+			} else if (iFrame % 3 == 1) {
+				return b;
+			} else {
+				return c;
+			}
+		};
+	};
 
 	const nullf = function(iFrame) { return null; };
 
 	const drawSets = [];
+	drawSets.push({
+		fb: alternate3(fbParticles1.fb, fbParticles2.fb, fbParticles3.fb),
+		iChannel0tex: alternate3(fbParticles2.tex, fbParticles3.tex, fbParticles1.tex),
+		iChannel1tex: alternate3(fbParticles3.tex, fbParticles1.tex, fbParticles2.tex),
+		iChannel2tex: nullf,
+		iChannel3tex: nullf,
+		program: programParticles,
+		w: w,
+		h: h,
+		vao: vao,
+		elements: 6
+	});
+	drawSets.push({
+		fb: nullf,
+		iChannel0tex: alternate3(fbParticles1.tex, fbParticles2.tex, fbParticles3.tex),
+		iChannel1tex: nullf,
+		iChannel2tex: nullf,
+		iChannel3tex: nullf,
+		program: programDrawParticles,
+		w: gl.canvas.width,
+		h: gl.canvas.height,
+		vao: particlesVAO,
+		elements: w * h * 6
+	});
+	/*
 	drawSets.push({
 		fb: alternate(fbTexA1.fb, fbTexA2.fb),
 		iChannel0tex: alternate(fbTexA2.tex, fbTexA1.tex),
@@ -243,6 +336,7 @@ function addContentGL(state) {
 		w: gl.canvas.width,
 		h: gl.canvas.height
 	});
+	*/
 	
 	for (let i = 0; i < drawSets.length; i++) {
 		const drawSet = drawSets[i];
@@ -258,28 +352,36 @@ function addContentGL(state) {
 		drawSets[i].iChannel3 = gl.getUniformLocation(program, "iChannel3");
 	}
 
-	// Disable blending
-	gl.disable(gl.BLEND);
 
 	state.renderFunctions.push(function() {
 		for (let i = 0; i < drawSets.length; i++) {
 			const drawSet = drawSets[i];
 			const fb = drawSet.fb(state.iFrame);
 			const program = drawSet.program;
+			const vao = drawSet.vao;
+			const count = drawSet.elements;
 
 			// render to our targetTexture by binding the framebuffer
 			gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
 			
 			// Resize
 			if (fb == null) {
+				gl.enable(gl.BLEND);
+				gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+				gl.blendEquation(gl.FUNC_ADD);
+				/*
+				gl.disable(gl.BLEND);
+				*/
+				gl.disable(gl.DEPTH_TEST);
 				resize(gl.canvas);
 				gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 			} else {
+				gl.disable(gl.BLEND);
 				gl.viewport(0, 0, w, h);
 			}
 
 			// Clear
-			gl.clearColor(0, 0, 0, 0);
+			gl.clearColor(0, 0, 0, 1);
 			gl.clear(gl.COLOR_BUFFER_BIT);
 
 			// Tell it to use our program (pair of shaders)
@@ -311,7 +413,6 @@ function addContentGL(state) {
 			// Draw
 			const primitiveType = gl.TRIANGLES;
 			const offset = 0;
-			const count = 6;
 			gl.drawArrays(primitiveType, offset, count);
 		}
 		state.iFrame++;

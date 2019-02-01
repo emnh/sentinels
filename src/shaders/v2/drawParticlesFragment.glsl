@@ -58,10 +58,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)	{
 			if (vFC.x <= 1.0) {
 				fragColor.rgb = fragColor.rgb * (1.0 - dod) + mix(vec3(1.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), dod);
 				fragColor.a = 0.0;
+        discard;
 			}
 
 			if (length(fragColor.rgb) < 0.001) {
 				fragColor.a = length(fragColor.rgb);
+        discard;
 			}
 		} else {
 			discard;

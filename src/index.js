@@ -93,7 +93,7 @@ function createShader(gl, type, source) {
 	if (success) {
 		return shader;
 	}
- 
+
 	const lines = source.split(/\r?\n/);
 	let s = "<pre>";
 	for (let i = 0; i < lines.length; i++) {
@@ -101,7 +101,7 @@ function createShader(gl, type, source) {
 	}
 	s += '</pre>';
 	$("body").html(s);
- 
+
 	console.log(gl.getShaderInfoLog(shader));
 	gl.deleteShader(shader);
 }
@@ -126,7 +126,7 @@ function createFB(gl, width, height) {
 	const targetTextureHeight = height;
 	const targetTexture = gl.createTexture();
 	gl.bindTexture(gl.TEXTURE_2D, targetTexture);
-	 
+
 	const level = 0;
 	{
 		// define size and format of level 0
@@ -138,7 +138,7 @@ function createFB(gl, width, height) {
 		gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
 									targetTextureWidth, targetTextureHeight, border,
 									format, type, data);
-	 
+
 		// set the filtering so we don't need mips
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -149,7 +149,7 @@ function createFB(gl, width, height) {
 	// Create and bind the framebuffer
 	const fb = gl.createFramebuffer();
 	gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
-	 
+
 	// attach the texture as the first color attachment
 	const attachmentPoint = gl.COLOR_ATTACHMENT0;
 	gl.framebufferTexture2D(gl.FRAMEBUFFER, attachmentPoint, gl.TEXTURE_2D, targetTexture, level);
@@ -180,7 +180,7 @@ function addContentGL(state) {
 		const program = createProgram(gl, particlesVertexShader, fragmentShader);
 		return program;
 	}
-  
+
 	const programParticles = prog("particles", particleShader);
 	const programA = prog("bufA", bufAShader);
 	const programB = prog("bufB", bufBShader);
@@ -218,6 +218,7 @@ function addContentGL(state) {
 		gl.vertexAttribPointer(positionAttributeLocation, size, type, normalize, stride, offset)
 	}
 
+	//const w = 512;
 	const w = 512;
 	const h = w;
 	const w2 = gl.canvas.width;
@@ -265,7 +266,7 @@ function addContentGL(state) {
 			}
 		};
 	};
-	
+
 	const alternate3 = function(a, b, c) {
 		return function(iFrame) {
 			if (iFrame % 3 == 0) {
@@ -337,7 +338,7 @@ function addContentGL(state) {
 		h: gl.canvas.height
 	});
 	*/
-	
+
 	for (let i = 0; i < drawSets.length; i++) {
 		const drawSet = drawSets[i];
 		const fb = drawSet.fb;
@@ -354,7 +355,9 @@ function addContentGL(state) {
 
 
 	state.renderFunctions.push(function() {
-		for (let i = 0; i < drawSets.length; i++) {
+    const ct = 0;
+		for (let j = 0; j < ct + drawSets.length; j++) {
+      let i = j < ct ? 0 : j - ct;
 			const drawSet = drawSets[i];
 			const fb = drawSet.fb(state.iFrame);
 			const program = drawSet.program;
@@ -363,7 +366,7 @@ function addContentGL(state) {
 
 			// render to our targetTexture by binding the framebuffer
 			gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
-			
+
 			// Resize
 			if (fb == null) {
 				gl.enable(gl.BLEND);
@@ -373,17 +376,17 @@ function addContentGL(state) {
 				gl.blendEquation(gl.FUNC_ADD);
 				//gl.blendEquation(gl.MAX);
 				/*
-				gl.disable(gl.BLEND);
 				*/
+				gl.disable(gl.BLEND);
 				gl.disable(gl.DEPTH_TEST);
 				resize(gl.canvas);
 				gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-				
+
 				// Clear
 				gl.disable(gl.BLEND);
 				gl.clearColor(0, 0, 0, 0);
 				gl.clear(gl.COLOR_BUFFER_BIT);
-				gl.enable(gl.BLEND);
+				//gl.enable(gl.BLEND);
 			} else {
 				gl.disable(gl.BLEND);
 				gl.viewport(0, 0, w, h);
@@ -418,13 +421,15 @@ function addContentGL(state) {
 			gl.bindTexture(gl.TEXTURE_2D, drawSet.iChannel2tex(state.iFrame));
 			gl.activeTexture(gl.TEXTURE3);
 			gl.bindTexture(gl.TEXTURE_2D, drawSet.iChannel3tex(state.iFrame));
-	
+
 			// Draw
 			const primitiveType = gl.TRIANGLES;
 			const offset = 0;
 			gl.drawArrays(primitiveType, offset, count);
+      if (j <= ct) {
+        state.iFrame++;
+      }
 		}
-		state.iFrame++;
 	});
 }
 

@@ -24,7 +24,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)	{
 
 			//float f = 0.5 - d;
 			//float f = 1.0 - d;
-			vec3 hsv = vec3(vIndex, 1.0, 1.0);
+			//vec3 hsv = vec3(vFC.x / vWP, 1.0, 1.0);
+			//vec3 hsv = vec3((vFC.x + vFC.y) / vWP, 1.0, 1.0);
+			//vec3 hsv = vec3(vIndex, 1.0, 1.0);
+			//vec3 hsv = vec3((fragCoord.x + fragCoord.y) / (iCanvasResolution.x + iCanvasResolution.y), 1.0, 1.0);
+			float ha = vIndex;
+			float hb = vFC.x / vWP;
+			float hc = (fragCoord.x + fragCoord.y) / (iCanvasResolution.x + iCanvasResolution.y);
+			vec3 hsv = vec3(ha + hb + hc, 1.0, 1.0);
 			vec3 rgb = hsv2rgb(hsv);
 			//fragColor.rgb = f * mix(vec3(1.0, 0.0, 0.0), vec3(1.0), f);
 			//fragColor.rgb = f * mix(vec3(1.0, 0.0, 0.0), vec3(1.0), vRed == 0.0 ? 0.0 : 1.0);

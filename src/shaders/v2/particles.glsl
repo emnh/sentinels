@@ -93,6 +93,7 @@ vec4 computeParticles(in vec2 fragCoord) {
     vec2 a2 = vec2(0.0);
     //int torusCount = int(pow(2.0, float(int(iTime / 4.0) % 10)));
     int torusCount = 32;
+    //int torusCount = 8;
     int particlesPerTorus = particlesPerPartition / torusCount;
     int wp = int(sqrt(float(particlesPerTorus)));
 		int pdIndex = toLinear(fragCoord, res);
@@ -103,22 +104,22 @@ vec4 computeParticles(in vec2 fragCoord) {
             vec2 fc = vec2(fromLinear(index, vec2(wp)));
             vec2 offset = vec2(i % w - w / 2, i / w - w / 2);
             if (torus % 3 == 0 && !justSentinels) {
-                // Torus
-                fc = fc + offset;
-            	fc = mod(fc, vec2(wp));
+								// Torus
+								fc = fc + offset;
+								fc = mod(fc, vec2(wp));
             } else if (torus % 3 == 1 && !justSentinels) {
-                // Cloth
-                fc = fc + offset;
-            	fc = clamp(fc, vec2(0.0), vec2(wp));
+								// Cloth
+								fc = fc + offset;
+								fc = clamp(fc, vec2(0.0), vec2(wp));
             } else {
-                // Sentinel
-                offset.x = -1.0;
-                offset.y = 0.0;
-                fc = fc + offset;
-                fc = clamp(fc, vec2(0.0), vec2(wp));
-                if (index % wp == 0) {
-                    fc = vec2(0.0);
-                }
+								// Sentinel
+								offset.x = -1.0;
+								offset.y = 0.0;
+								fc = fc + offset;
+								fc = clamp(fc, vec2(0.0), vec2(wp));
+								if (index % wp == 0) {
+										fc = vec2(0.0);
+								}
             }
             int j = toLinear(fc, vec2(wp)) + pdIndex - index;
             vec2 p2 = getPosition2(particleBuffer, j, res);

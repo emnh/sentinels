@@ -311,3 +311,7 @@ mRet getM2(sampler2D channel, sampler2D pchannel, sampler2D mchannel, int part, 
     //valid = true;
     return mRet(int(v[part]), ret2.Am, v, ret2.v, ret2.pos, valid && ret2.valid);
 }
+
+float sinc(float x) {
+	return (sin(x) + 1.0) * 0.5;
+}

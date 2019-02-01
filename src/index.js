@@ -368,21 +368,30 @@ function addContentGL(state) {
 			if (fb == null) {
 				gl.enable(gl.BLEND);
 				gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+				//gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_DST_ALPHA);
+				//gl.blendFunc(gl.SRC_ALPHA, gl.ZERO);
 				gl.blendEquation(gl.FUNC_ADD);
+				//gl.blendEquation(gl.MAX);
 				/*
 				gl.disable(gl.BLEND);
 				*/
 				gl.disable(gl.DEPTH_TEST);
 				resize(gl.canvas);
 				gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+				
+				// Clear
+				gl.disable(gl.BLEND);
+				gl.clearColor(0, 0, 0, 0);
+				gl.clear(gl.COLOR_BUFFER_BIT);
+				gl.enable(gl.BLEND);
 			} else {
 				gl.disable(gl.BLEND);
 				gl.viewport(0, 0, w, h);
-			}
 
-			// Clear
-			gl.clearColor(0, 0, 0, 1);
-			gl.clear(gl.COLOR_BUFFER_BIT);
+				// Clear
+				gl.clearColor(0, 0, 0.2, 1);
+				gl.clear(gl.COLOR_BUFFER_BIT);
+			}
 
 			// Tell it to use our program (pair of shaders)
 			gl.useProgram(program);
